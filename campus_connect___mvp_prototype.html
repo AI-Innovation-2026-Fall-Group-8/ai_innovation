@@ -83,11 +83,23 @@
     color: #0064A4;
     font-weight: 600;
   }
-  #cardGrid {
+  #cardGrid { display: block; }
+  .day-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 18px;
   }
+  .date-group { margin: 28px 0; }
+  .date-heading { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: baseline; font-size: 1.2rem; border-bottom: 2px solid #b9d2e4; padding-bottom: 10px; margin-bottom: 16px; }
+  .date-heading span { font-size: .8rem; font-weight: 500; color: #476277; }
+  .event-when { background: #e8f2fa; border-left: 5px solid #0064a4; border-radius: 6px; padding: 12px; display: flex; flex-direction: column; gap: 5px; line-height: 1.4; color: #004571; font-size: 1rem; font-weight: 700; }
+  .event-when strong { text-transform: uppercase; letter-spacing: 1px; font-size: .72rem; }
+  .tag-search { display: flex; flex-direction: column; gap: 6px; margin: 16px 0; font-size: .9rem; font-weight: 600; }
+  #tagSearch { width: 100%; border: 1px solid #0064a4; border-radius: 8px; padding: 11px 12px; font-size: 1rem; color: #0064a4; }
+  .event-tools label { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  input[type="date"] { max-width: 100%; border: 1px solid #0064a4; padding: 8px; border-radius: 6px; color: #0064a4; font: inherit; background: white; }
+  #activeFilters { background: #fff8d9; border: 1px solid #e5cd65; border-radius: 8px; padding: 10px 12px; font-size: .88rem; line-height: 1.5; margin: 12px 0; color: #4d461f; }
+  #filterError { color: #9c2929; font-weight: 600; margin: 12px 0; }
   .card {
     background: #ffffff;
     border: 1px solid #dce5ec;
@@ -188,7 +200,7 @@
     margin-top: 30px;
   }
   @media (max-width: 600px) {
-    #cardGrid {
+    .day-grid {
       grid-template-columns: 1fr;
     }
     header h1 {
@@ -218,16 +230,41 @@
       <button class="filter-btn" hidden data-category="Career Fairs">Career Fairs</button>
       <button class="filter-btn" hidden data-category="Health/Wellness">Health/Wellness</button>
     </div>
+    <label class="tag-search" for="tagSearch">Search tags
+      <input type="search" id="tagSearch" list="tagSuggestions" placeholder="Type a tag, e.g. networking, art, wellness…" autocomplete="off">
+    </label>
+    <datalist id="tagSuggestions"></datalist>
     <div class="event-tools">
       <label for="eventCategoryFilter">Event category:
         <select id="eventCategoryFilter"><option value="">All event categories</option></select>
       </label>
-      <label for="eventPeriod">UCI events: <select id="eventPeriod">
+      <label for="eventPeriod">Dates: <select id="eventPeriod">
         <option value="upcoming">Upcoming &amp; ongoing</option>
+        <option value="today">Today</option>
+        <option value="tomorrow">Tomorrow</option>
+        <option value="next7">Next 7 days</option>
         <option value="all">All dates</option>
         <option value="past">Past events</option>
         <option value="undated">Dates unconfirmed</option>
       </select></label>
+    </div>
+    <div class="event-tools">
+      <label for="dateFrom">From <input type="date" id="dateFrom"></label>
+      <label for="dateTo">Through <input type="date" id="dateTo"></label>
+      <label for="timeOfDay">Starts at
+        <select id="timeOfDay">
+          <option value="">Any time</option>
+          <option value="morning">Morning · 6 AM–noon</option>
+          <option value="afternoon">Afternoon · noon–5 PM</option>
+          <option value="evening">Evening · 5–9 PM</option>
+          <option value="night">Night · 9 PM–6 AM</option>
+        </select>
+      </label>
+      <button id="resetFiltersBtn" class="filter-btn" type="button">Clear filters</button>
+    </div>
+    <p class="snapshot-note">Pacific Time · Earliest start first · Multi-day events appear under their start date. Date filters include events that overlap the selected days.</p>
+    <p id="filterError" role="alert" hidden>The From date must be on or before the Through date.</p>
+    <div class="event-tools">
       <label><input id="showDemos" type="checkbox"> Include demo resource listings</label>
     </div>
     <p class="snapshot-note" id="snapshotNote"></p>
@@ -238,6 +275,7 @@
     <button id="retryFeed" class="filter-btn" type="button">Try again</button>
     <a href="https://zotspot.uci.edu/events" target="_blank" rel="noopener noreferrer">Browse live UCI events ↗</a>
   </div>
+  <p id="activeFilters" aria-live="polite"></p>
   <section id="resultsInfo" aria-live="polite"></section>
 
   <section id="cardGrid"></section>

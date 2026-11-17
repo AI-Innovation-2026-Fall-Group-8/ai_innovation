@@ -26,6 +26,16 @@ const activeCategories = new Set(['Events']);
 const eventPeriod = document.getElementById('eventPeriod');
 const showDemos = document.getElementById('showDemos');
 const eventCategoryFilter = document.getElementById('eventCategoryFilter');
+const tagSearch = document.getElementById('tagSearch');
+const dateFrom = document.getElementById('dateFrom');
+const dateTo = document.getElementById('dateTo');
+const timeOfDay = document.getElementById('timeOfDay');
+[tagSearch, timeOfDay].forEach(control => control.addEventListener('input', render));
+[dateFrom, dateTo].forEach(control => control.addEventListener('input', () => {
+  eventPeriod.value = 'all';
+  render();
+}));
+timeOfDay.addEventListener('change', render);
 showDemos.addEventListener('change', () => {
   if (!showDemos.checked) {
     activeCategories.clear();
@@ -66,12 +76,92 @@ function uniqueLabels(values) {
 
 function updateEventCategoryFilter() {
   const selected = eventCategoryFilter.value;
-  const counts = new Map();
-  UCI_EVENTS.forEach(item => item.sourceCategories.forEach(category => counts.set(category, (counts.get(category) || 0) + 1)));
+  const totals = new Map(), matching = new Map();
+  UCI_EVENTS.forEach(item => item.sourceCategories.forEach(category => totals.set(category, (totals.get(category) || 0) + 1)));
+  getFilteredListings(true).filter(item => item.isEvent).forEach(item => item.sourceCategories.forEach(category => matching.set(category, (matching.get(category) || 0) + 1)));
   eventCategoryFilter.innerHTML = '<option value="">All event categories</option>' +
-    [...counts].sort(([a], [b]) => a.localeCompare(b)).map(([category, count]) =>
-      `<option value="${escapeHtml(category)}">${escapeHtml(category)} (${count})</option>`).join('');
-  eventCategoryFilter.value = counts.has(selected) ? selected : '';
+    [...totals].sort(([a], [b]) => a.localeCompare(b)).map(([category, total]) => {
+      const count = matching.get(category) || 0;
+      const label = count === total ? String(total) : `${count} matching / ${total} total`;
+      return `<option value="${escapeHtml(category)}">${escapeHtml(category)} (${label})</option>`;
+    }).join('');
+  eventCategoryFilter.value = totals.has(selected) ? selected : '';
+}
+
+function updateActiveFilters() {
+  const filters = [];
+  if (searchText.trim()) filters.push(`Search: “${searchText.trim()}”`);
+  if (tagSearch.value.trim()) filters.push(`Tag: “${tagSearch.value.trim()}”`);
+  if (eventCategoryFilter.value) filters.push(`Category: ${eventCategoryFilter.value}`);
+  const periods = {upcoming: 'Upcoming & ongoing', today: 'Today', tomorrow: 'Tomorrow', next7: 'Next 7 days', past: 'Past events', undated: 'Dates unconfirmed'};
+  if (periods[eventPeriod.value]) filters.push(`Dates: ${periods[eventPeriod.value]}`);
+  if (dateFrom.value) filters.push(`From: ${dateFrom.value}`);
+  if (dateTo.value) filters.push(`Through: ${dateTo.value}`);
+  if (timeOfDay.value) filters.push(`Start time: ${timeOfDay.value}`);
+  const groups = [...activeCategories].filter(category => category !== 'Events');
+  if (groups.length) filters.push(`Resource groups: ${groups.join(', ')}`);
+  document.getElementById('activeFilters').textContent = filters.length
+    ? `Active filters — ${filters.join(' · ')}`
+    : 'No active search, tag, category or time filters.';
+}
+
+const PACIFIC = 'America/Los_Angeles';
+function dayKey(value) {
+  const parts = new Intl.DateTimeFormat('en-US', {timeZone: PACIFIC, year: 'numeric', month: '2-digit', day: '2-digit'}).formatToParts(new Date(value));
+  const part = type => parts.find(value => value.type === type).value;
+  return `${part('year')}-${part('month')}-${part('day')}`;
+}
+
+function addDays(key, count) {
+  // Calendar arithmetic, not 24-hour arithmetic across daylight saving changes.
+  return new Date(Date.parse(key + 'T12:00:00Z') + count * 86400000).toISOString().slice(0, 10);
+}
+
+function overlapsDates(item, first, last) {
+  if (!item.start) return false;
+  const start = dayKey(item.start);
+  const end = dayKey(item.end || item.start);
+  return (!first || end >= first) && (!last || start <= last);
+}
+
+function matchesTimeFilters(item) {
+  if (!item.isEvent) return !dateFrom.value && !dateTo.value && !timeOfDay.value;
+  const today = dayKey(Date.now());
+  let matchesPeriod;
+  switch (eventPeriod.value) {
+    case 'all': matchesPeriod = true; break;
+    case 'past': matchesPeriod = isPastEvent(item); break;
+    case 'undated': matchesPeriod = !item.start; break;
+    case 'today': matchesPeriod = overlapsDates(item, today, today); break;
+    case 'tomorrow': matchesPeriod = overlapsDates(item, addDays(today, 1), addDays(today, 1)); break;
+    case 'next7': matchesPeriod = overlapsDates(item, today, addDays(today, 6)); break;
+    default: matchesPeriod = Boolean(item.start) && !isPastEvent(item);
+  }
+  if (!matchesPeriod) return false;
+  if ((dateFrom.value || dateTo.value) && !overlapsDates(item, dateFrom.value, dateTo.value)) return false;
+  if (timeOfDay.value) {
+    // A source's multi-day range does not tell us each session's time. Use start time only.
+    if (!item.start || item.allDay) return false;
+    const hour = Number(new Intl.DateTimeFormat('en-US', {timeZone: PACIFIC, hour: 'numeric', hourCycle: 'h23'}).format(new Date(item.start)));
+    const periods = {morning: [6, 12], afternoon: [12, 17], evening: [17, 21], night: [21, 30]};
+    const [first, last] = periods[timeOfDay.value] || [0, 24];
+    const normalizedHour = timeOfDay.value === 'night' && hour < 6 ? hour + 24 : hour;
+    if (normalizedHour < first || normalizedHour >= last) return false;
+  }
+  return true;
+}
+
+function dayHeading(item) {
+  if (!item.isEvent) return 'Demo resources';
+  if (!item.start) return 'Dates to be confirmed';
+  const date = new Intl.DateTimeFormat('en-US', {timeZone: PACIFIC, weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'}).format(new Date(item.start));
+  const key = dayKey(item.start), today = dayKey(Date.now());
+  return `${date}${key === today ? ' · Today' : key === addDays(today, 1) ? ' · Tomorrow' : ''}`;
+}
+
+function updateTagSuggestions() {
+  const tags = uniqueLabels(UCI_EVENTS.flatMap(item => item.tags)).sort((a, b) => a.localeCompare(b));
+  document.getElementById('tagSuggestions').innerHTML = tags.map(tag => `<option value="${escapeHtml(tag)}"></option>`).join('');
 }
 
 function isPastEvent(item) {
@@ -90,23 +180,22 @@ function isEmail(str) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(str);
 }
 
-function getFilteredListings() {
+function getFilteredListings(ignoreEventCategory = false) {
   return LISTINGS.filter(item => {
     const text = [item.title, item.description, item.organizer, item.location, ...(item.tags || [])].join(' ').toLowerCase();
     const matchesSearch = text.includes(searchText.toLowerCase());
     const matchesCategory = activeCategories.size === 0 ||
       item.categories.some(cat => activeCategories.has(cat));
-    const matchesPeriod = !item.isEvent || eventPeriod.value === 'all' ||
-      (eventPeriod.value === 'undated' ? !item.start : item.start &&
-        (eventPeriod.value === 'past' ? isPastEvent(item) : !isPastEvent(item)));
-    const matchesEventCategory = !eventCategoryFilter.value ||
+    const matchesPeriod = matchesTimeFilters(item);
+    const query = tagSearch.value.trim().toLowerCase();
+    const matchesTag = !query || (item.tags || item.categories).some(tag => tag.toLowerCase().includes(query));
+    const matchesEventCategory = ignoreEventCategory || !eventCategoryFilter.value ||
       (item.isEvent && item.sourceCategories.includes(eventCategoryFilter.value));
-    return matchesSearch && matchesCategory && matchesPeriod && matchesEventCategory;
+    return matchesSearch && matchesCategory && matchesPeriod && matchesEventCategory && matchesTag;
   }).sort((a, b) => {
     if (!a.isEvent || !b.isEvent) return Number(Boolean(b.isEvent)) - Number(Boolean(a.isEvent));
-    if (isPastEvent(a) !== isPastEvent(b)) return Number(isPastEvent(a)) - Number(isPastEvent(b));
     if (!a.start || !b.start) return Number(Boolean(b.start)) - Number(Boolean(a.start));
-    return isPastEvent(a) ? new Date(b.start) - new Date(a.start) : new Date(a.start) - new Date(b.start);
+    return new Date(a.start) - new Date(b.start) || a.title.localeCompare(b.title) || a.id.localeCompare(b.id);
   });
 }
 
@@ -123,17 +212,24 @@ function renderCards(listings) {
   cardGrid.hidden = false;
   emptyState.hidden = true;
 
-  cardGrid.innerHTML = listings.map((item, idx) => {
+  const groups = new Map();
+  listings.forEach(item => {
+    const key = !item.isEvent ? 'demo' : item.start ? dayKey(item.start) : 'undated';
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(item);
+  });
+
+  function cardHtml(item) {
     const tagsHtml = (item.isEvent ? item.displayTags : item.categories).map((cat, i) => {
       const cls = item.isEvent ? (item.sourceCategories.includes(cat) ? 'blue-bg' : 'yellow-bg') : (i % 2 === 0 ? 'blue-bg' : 'yellow-bg');
       return `<span class="tag ${cls}">${escapeHtml(cat)}</span>`;
     }).join('');
 
     const dateLabel = item.isEvent && item.start
-      ? `${eventDate(item.start, item.allDay)}${item.end && (!item.allDay || eventDate(item.end, true) !== eventDate(item.start, true)) ? ' – ' + eventDate(item.end, item.allDay) : ''}${item.allDay ? ' (all day)' : ' PT'}`
+      ? `${eventDate(item.start, item.allDay)}${item.end && (!item.allDay || eventDate(item.end, true) !== eventDate(item.start, true)) ? ' – ' + (item.allDay || dayKey(item.start) !== dayKey(item.end) ? eventDate(item.end, item.allDay) : new Intl.DateTimeFormat('en-US', {timeZone: PACIFIC, timeStyle: 'short'}).format(new Date(item.end))) : ''}${item.allDay ? ' (all day)' : ' PT'}`
       : item.datetime;
     const datetimeRow = dateLabel
-      ? `<div class="meta-row"><strong>When:</strong> ${escapeHtml(dateLabel)}</div>`
+      ? `<div class="event-when"><strong>When</strong><span>${escapeHtml(dateLabel)}</span></div>`
       : '';
 
     const contactHref = safeContact(item.contact);
@@ -142,16 +238,21 @@ function renderCards(listings) {
     return `
       <div class="card">
         <h3>${escapeHtml(item.title)}</h3>
+        ${datetimeRow}
         <div class="tags">${tagsHtml}</div>
         <p class="desc">${escapeHtml(item.description)}</p>
         ${item.isEvent ? `<div class="meta-row"><strong>Organizer:</strong> ${escapeHtml(item.organizer)}</div><div class="meta-row">${!item.start ? 'Date to be confirmed' : isPastEvent(item) ? 'Past event' : 'Upcoming / ongoing'}${item.cost ? ' · ' + escapeHtml(item.cost) : ''}</div>` : '<div class="meta-row">Demo listing</div>'}
-        ${datetimeRow}
         <div class="meta-row"><strong>Where:</strong> ${escapeHtml(item.location)}</div>
         ${contactHref ? `<a class="contact-link" href="${escapeHtml(contactHref)}" target="_blank" rel="noopener noreferrer">${contactLabel}</a>` : '<p class="meta-row">Official link not provided</p>'}
         <div class="via-source">via ${escapeHtml(item.source)}</div>
       </div>
     `;
-  }).join('');
+  }
+  cardGrid.innerHTML = [...groups].map(([key, items], index) => `
+    <section class="date-group" aria-labelledby="day-${index}">
+      <h2 class="date-heading" id="day-${index}">${escapeHtml(dayHeading(items[0]))}<span>${items.length} ${items.length === 1 ? 'listing' : 'listings'}</span></h2>
+      <div class="day-grid">${items.map(cardHtml).join('')}</div>
+    </section>`).join('');
 }
 
 function render() {
@@ -161,8 +262,18 @@ function render() {
     resultsInfo.textContent = feedState === 'loading' ? 'Loading UCI events…' : 'Event feed unavailable';
     return;
   }
+  updateActiveFilters();
+  const invalidRange = Boolean(dateFrom.value && dateTo.value && dateFrom.value > dateTo.value);
+  document.getElementById('filterError').hidden = !invalidRange;
+  if (invalidRange) {
+    cardGrid.hidden = true;
+    emptyState.hidden = true;
+    resultsInfo.textContent = 'Choose a valid date range to see events.';
+    return;
+  }
   updateFilterButtonStates();
   LISTINGS = showDemos.checked ? [...UCI_EVENTS, ...DEMO_LISTINGS] : UCI_EVENTS;
+  updateEventCategoryFilter();
   const filtered = getFilteredListings();
   renderCards(filtered);
 }
@@ -207,15 +318,22 @@ function updateFilterButtonStates() {
   });
 }
 
-clearFiltersBtn.addEventListener('click', () => {
+function clearFilters() {
   searchText = '';
   searchInput.value = '';
   activeCategories.clear();
   eventPeriod.value = 'all';
   eventCategoryFilter.value = '';
+  tagSearch.value = '';
+  dateFrom.value = '';
+  dateTo.value = '';
+  timeOfDay.value = '';
+  showDemos.checked = false;
   updateFilterButtonStates();
   render();
-});
+}
+clearFiltersBtn.addEventListener('click', clearFilters);
+document.getElementById('resetFiltersBtn').addEventListener('click', clearFilters);
 
 function normalizeFeed(rows) {
   if (!Array.isArray(rows)) throw new Error('The event feed must contain a JSON array.');
@@ -266,7 +384,7 @@ async function loadEvents() {
     const response = await fetch('./data/output/unified_events.json', {cache: 'no-cache', signal: controller.signal});
     if (!response.ok) throw new Error(`The event file could not be loaded (HTTP ${response.status}).`);
     UCI_EVENTS = normalizeFeed(await response.json());
-    updateEventCategoryFilter();
+    updateTagSuggestions();
     feedState = 'ready';
     const dates = UCI_EVENTS.map(item => item.lastUpdated.slice(0, 10)).filter(value => /^\d{4}-\d{2}-\d{2}$/.test(value)).sort();
     const updated = dates.length ? ` Latest record update: ${dates[dates.length - 1]}.` : '';
