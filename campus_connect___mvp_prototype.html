@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ZotLife</title>
 <style>
+  [hidden] { display: none !important; }
+  .event-tools { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin: 16px 0; }
+  .event-tools a, header a { color: inherit; }
+  .snapshot-note { color: #476277; font-size: .85rem; line-height: 1.5; margin: 12px 0; }
+  select { padding: 8px; border: 1px solid #0064A4; border-radius: 6px; background: white; color: #0064A4; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -78,11 +83,23 @@
     color: #0064A4;
     font-weight: 600;
   }
-  #cardGrid {
+  #cardGrid { display: block; }
+  .day-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 18px;
   }
+  .date-group { margin: 28px 0; }
+  .date-heading { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: baseline; font-size: 1.2rem; border-bottom: 2px solid #b9d2e4; padding-bottom: 10px; margin-bottom: 16px; }
+  .date-heading span { font-size: .8rem; font-weight: 500; color: #476277; }
+  .event-when { background: #e8f2fa; border-left: 5px solid #0064a4; border-radius: 6px; padding: 12px; display: flex; flex-direction: column; gap: 5px; line-height: 1.4; color: #004571; font-size: 1rem; font-weight: 700; }
+  .event-when strong { text-transform: uppercase; letter-spacing: 1px; font-size: .72rem; }
+  .tag-search { display: flex; flex-direction: column; gap: 6px; margin: 16px 0; font-size: .9rem; font-weight: 600; }
+  #tagSearch { width: 100%; border: 1px solid #0064a4; border-radius: 8px; padding: 11px 12px; font-size: 1rem; color: #0064a4; }
+  .event-tools label { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  input[type="date"] { max-width: 100%; border: 1px solid #0064a4; padding: 8px; border-radius: 6px; color: #0064a4; font: inherit; background: white; }
+  #activeFilters { background: #fff8d9; border: 1px solid #e5cd65; border-radius: 8px; padding: 10px 12px; font-size: .88rem; line-height: 1.5; margin: 12px 0; color: #4d461f; }
+  #filterError { color: #9c2929; font-weight: 600; margin: 12px 0; }
   .card {
     background: #ffffff;
     border: 1px solid #dce5ec;
@@ -183,7 +200,7 @@
     margin-top: 30px;
   }
   @media (max-width: 600px) {
-    #cardGrid {
+    .day-grid {
       grid-template-columns: 1fr;
     }
     header h1 {
@@ -197,176 +214,84 @@
 <header>
   <h1>ZotLife</h1>
   <p>Find clubs, jobs, housing &amp; more — all in one place.</p>
+  <p><a href="https://zotspot.uci.edu/events" target="_blank" rel="noopener noreferrer">Open the live UCI events calendar ↗</a></p>
 </header>
 
 <main>
   <section id="controls">
-    <input type="text" id="searchInput" placeholder="Search events, jobs, resources...">
-    <div id="categoryFilters">
-      <button class="filter-btn active" data-category="All">All</button>
-      <button class="filter-btn" data-category="Clubs">Clubs</button>
-      <button class="filter-btn" data-category="Jobs">Jobs</button>
-      <button class="filter-btn" data-category="Basic Needs">Basic Needs</button>
-      <button class="filter-btn" data-category="Housing">Housing</button>
-      <button class="filter-btn" data-category="Events">Events</button>
-      <button class="filter-btn" data-category="Career Fairs">Career Fairs</button>
-      <button class="filter-btn" data-category="Health/Wellness">Health/Wellness</button>
+    <input type="search" aria-label="Search listings" id="searchInput" placeholder="Search events, jobs, resources...">
+    <div id="categoryFilters" aria-label="Event feed and demo resource groups">
+      <button class="filter-btn" data-category="All">All</button>
+      <button class="filter-btn" hidden data-category="Clubs">Clubs</button>
+      <button class="filter-btn" hidden data-category="Jobs">Jobs</button>
+      <button class="filter-btn" hidden data-category="Basic Needs">Basic Needs</button>
+      <button class="filter-btn" hidden data-category="Housing">Housing</button>
+      <button class="filter-btn active" data-category="Events">UCI Events</button>
+      <button class="filter-btn" hidden data-category="Career Fairs">Career Fairs</button>
+      <button class="filter-btn" hidden data-category="Health/Wellness">Health/Wellness</button>
     </div>
+    <label class="tag-search" for="tagSearch">Search tags
+      <input type="search" id="tagSearch" list="tagSuggestions" placeholder="Type a tag, e.g. networking, art, wellness…" autocomplete="off">
+    </label>
+    <datalist id="tagSuggestions"></datalist>
+    <div class="event-tools">
+      <label for="eventCategoryFilter">Event category:
+        <select id="eventCategoryFilter"><option value="">All event categories</option></select>
+      </label>
+      <label for="eventPeriod">Dates: <select id="eventPeriod">
+        <option value="upcoming">Upcoming &amp; ongoing</option>
+        <option value="today">Today</option>
+        <option value="tomorrow">Tomorrow</option>
+        <option value="next7">Next 7 days</option>
+        <option value="all">All dates</option>
+        <option value="past">Past events</option>
+        <option value="undated">Dates unconfirmed</option>
+      </select></label>
+    </div>
+    <div class="event-tools">
+      <label for="dateFrom">From <input type="date" id="dateFrom"></label>
+      <label for="dateTo">Through <input type="date" id="dateTo"></label>
+      <label for="timeOfDay">Starts at
+        <select id="timeOfDay">
+          <option value="">Any time</option>
+          <option value="morning">Morning · 6 AM–noon</option>
+          <option value="afternoon">Afternoon · noon–5 PM</option>
+          <option value="evening">Evening · 5–9 PM</option>
+          <option value="night">Night · 9 PM–6 AM</option>
+        </select>
+      </label>
+      <button id="resetFiltersBtn" class="filter-btn" type="button">Clear filters</button>
+    </div>
+    <p class="snapshot-note">Pacific Time · Earliest start first · Multi-day events appear under their start date. Date filters include events that overlap the selected days.</p>
+    <p id="filterError" role="alert" hidden>The From date must be on or before the Through date.</p>
+    <div class="event-tools">
+      <label><input id="showDemos" type="checkbox"> Include demo resource listings</label>
+    </div>
+    <p class="snapshot-note" id="snapshotNote"></p>
   </section>
 
-  <section id="resultsInfo"></section>
+  <div id="feedError" role="alert" hidden>
+    <p id="feedErrorMessage"></p>
+    <button id="retryFeed" class="filter-btn" type="button">Try again</button>
+    <a href="https://zotspot.uci.edu/events" target="_blank" rel="noopener noreferrer">Browse live UCI events ↗</a>
+  </div>
+  <p id="activeFilters" aria-live="polite"></p>
+  <section id="resultsInfo" aria-live="polite"></section>
 
   <section id="cardGrid"></section>
 
   <div id="emptyState" hidden>
-    <p>No listings match your search. Try different keywords or categories.</p>
+    <p>No listings match these filters. Try All dates or different keywords. For newer events, open the live UCI calendar above.</p>
     <button id="clearFiltersBtn">Clear Filters</button>
   </div>
 </main>
 
 <footer>
-  ZotLife MVP — Demo Prototype
+  ZotLife — UCI events from ZotSpot · Other resource listings are demo examples
 </footer>
 
-<script>
-const LISTINGS = [
-  {"id":"1","title":"ASUCI General Club Fair","categories":["Clubs","Events"],"description":"Explore 100+ student organizations, grab free swag, and sign up for clubs that match your interests.","datetime":"Oct 29, 2025, 11:00 AM","location":"Ring Road, Main Campus","contact":"https://asuci.uci.edu/clubfair","source":"Club Website"},
-  {"id":"2","title":"Part-Time Barista — Anteatery Café","categories":["Jobs"],"description":"On-campus café hiring part-time baristas. Flexible shifts, work-study eligible, training provided.","datetime":null,"location":"Anteatery, Student Center","contact":"https://jobs.uci.edu/listing/4821","source":"Career Center"},
-  {"id":"3","title":"FRESH Basic Needs Hub — Free Groceries","categories":["Basic Needs"],"description":"Weekly grocery distribution for students facing food insecurity. No application needed, just bring your student ID.","datetime":"Every Tuesday, 10:00 AM - 2:00 PM","location":"FRESH Basic Needs Hub, G319 Student Center","contact":"fresh@uci.edu","source":"Canvas"},
-  {"id":"4","title":"Subleaser Needed — Studio Near Campus","categories":["Housing"],"description":"Winter quarter sublease available, 5 min walk to campus, furnished studio, utilities included.","datetime":null,"location":"Camino Del Sol Apartments","contact":"subleasestudent@gmail.com","source":"Instagram"},
-  {"id":"5","title":"Fall Career & Internship Fair","categories":["Career Fairs","Jobs"],"description":"Meet recruiters from 80+ companies hiring for internships and full-time roles across all majors.","datetime":"Nov 5, 2025, 10:00 AM - 3:00 PM","location":"Bren Events Center","contact":"https://career.uci.edu/fall-fair","source":"Career Center"},
-  {"id":"6","title":"Mindfulness & Stress Relief Workshop","categories":["Health/Wellness"],"description":"Guided meditation and breathing exercises to help manage midterm stress. Open to all students.","datetime":"Oct 31, 2025, 4:00 PM","location":"Student Health Center, Room 201","contact":"wellness@uci.edu","source":"Student Health Center"},
-  {"id":"7","title":"Computer Science Club Weekly Meeting","categories":["Clubs"],"description":"Weekly meetup for CS students: coding challenges, project showcases, and guest speaker talks.","datetime":"Every Wednesday, 6:00 PM","location":"DBH 1300","contact":"https://csclub.ics.uci.edu","source":"Club Website"},
-  {"id":"8","title":"Campus Food Pantry Volunteer Opportunity","categories":["Basic Needs","Jobs"],"description":"Volunteer hours available for students who want to help stock and distribute food at the pantry.","datetime":null,"location":"FRESH Basic Needs Hub","contact":"fresh-volunteer@uci.edu","source":"Canvas"},
-  {"id":"9","title":"Roommate Wanted — 2BR Apartment","categories":["Housing"],"description":"Looking for a clean, quiet roommate to share a 2-bedroom apartment starting Winter quarter. $900/month.","datetime":null,"location":"University Hills","contact":"roommatewanted@uci.edu","source":"Instagram"},
-  {"id":"10","title":"Free Flu Shot Clinic","categories":["Health/Wellness","Events"],"description":"Free flu vaccinations for all students with valid student ID. Walk-ins welcome, no appointment needed.","datetime":"Nov 3, 2025, 9:00 AM - 1:00 PM","location":"Student Health Center Lobby","contact":"https://shc.uci.edu/flu","source":"Student Health Center"},
-  {"id":"11","title":"Women in STEM Networking Night","categories":["Clubs","Career Fairs"],"description":"Connect with alumnae and industry professionals in STEM fields over dinner and casual networking.","datetime":"Nov 7, 2025, 6:00 PM","location":"Calit2 Auditorium","contact":"https://wistem.uci.edu/networking","source":"Club Website"},
-  {"id":"12","title":"Resident Assistant (RA) Hiring","categories":["Jobs","Housing"],"description":"Housing office hiring RAs for next academic year. Free housing + stipend included. Applications due soon.","datetime":"Applications due Dec 1, 2025","location":"Housing Administration Office","contact":"https://housing.uci.edu/ra-jobs","source":"Canvas"},
-  {"id":"13","title":"Late Night Study Jam & Free Snacks","categories":["Events","Basic Needs"],"description":"Finals prep event with free coffee, snacks, and quiet study space open until 2 AM.","datetime":"Dec 8, 2025, 8:00 PM - 2:00 AM","location":"Langson Library","contact":"https://library.uci.edu/latenight","source":"Instagram"},
-  {"id":"14","title":"Peer Tutoring Program Sign-Up","categories":["Basic Needs","Clubs"],"description":"Free peer tutoring for math, chemistry, and physics courses. Sign up for weekly sessions.","datetime":null,"location":"Learning & Academic Resource Center","contact":"https://larc.sa.uci.edu","source":"Canvas"},
-  {"id":"15","title":"Tech Company Info Session — DataCore Inc.","categories":["Career Fairs","Jobs"],"description":"Info session with Q&A about internship and new-grad software engineering roles. Pizza provided.","datetime":"Nov 12, 2025, 5:30 PM","location":"Engineering Hall 2430","contact":"https://career.uci.edu/datacore-infosession","source":"Career Center"},
-  {"id":"16","title":"Yoga on the Lawn","categories":["Health/Wellness","Events"],"description":"Free weekly outdoor yoga session for all skill levels. Mats provided, just bring water.","datetime":"Every Friday, 3:00 PM","location":"Aldrich Park","contact":"wellness@uci.edu","source":"Instagram"},
-  {"id":"17","title":"Emergency Housing Assistance Program","categories":["Housing","Basic Needs"],"description":"Short-term emergency housing support for students facing unexpected housing insecurity.","datetime":null,"location":"Dean of Students Office","contact":"deanofstudents@uci.edu","source":"Canvas"},
-  {"id":"18","title":"Anteater Entrepreneurship Club Pitch Night","categories":["Clubs","Events"],"description":"Student founders pitch their startups to peers and local investors. Open to all majors, free admission.","datetime":"Nov 14, 2025, 7:00 PM","location":"The Cove, Student Center","contact":"https://aec.uci.edu/pitchnight","source":"Club Website"}
-];
+<script src="./app.js" defer></script>
 
-const activeCategories = new Set();
-let searchText = "";
-
-const searchInput = document.getElementById('searchInput');
-const categoryFilters = document.getElementById('categoryFilters');
-const resultsInfo = document.getElementById('resultsInfo');
-const cardGrid = document.getElementById('cardGrid');
-const emptyState = document.getElementById('emptyState');
-const clearFiltersBtn = document.getElementById('clearFiltersBtn');
-
-function isEmail(str) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(str);
-}
-
-function getFilteredListings() {
-  return LISTINGS.filter(item => {
-    const text = (item.title + ' ' + item.description).toLowerCase();
-    const matchesSearch = text.includes(searchText.toLowerCase());
-    const matchesCategory = activeCategories.size === 0 ||
-      item.categories.some(cat => activeCategories.has(cat));
-    return matchesSearch && matchesCategory;
-  });
-}
-
-function renderCards(listings) {
-  resultsInfo.textContent = `Showing ${listings.length} of ${LISTINGS.length} listings`;
-
-  if (listings.length === 0) {
-    cardGrid.hidden = true;
-    emptyState.hidden = false;
-    cardGrid.innerHTML = '';
-    return;
-  }
-
-  cardGrid.hidden = false;
-  emptyState.hidden = true;
-
-  cardGrid.innerHTML = listings.map((item, idx) => {
-    const tagsHtml = item.categories.map((cat, i) => {
-      const cls = i % 2 === 0 ? 'blue-bg' : 'yellow-bg';
-      return `<span class="tag ${cls}">${cat}</span>`;
-    }).join('');
-
-    const datetimeRow = item.datetime
-      ? `<div class="meta-row"><strong>When:</strong> ${item.datetime}</div>`
-      : '';
-
-    const contactHref = isEmail(item.contact) ? `mailto:${item.contact}` : item.contact;
-    const contactLabel = isEmail(item.contact) ? 'Email' : 'Visit Link';
-
-    return `
-      <div class="card">
-        <h3>${item.title}</h3>
-        <div class="tags">${tagsHtml}</div>
-        <p class="desc">${item.description}</p>
-        ${datetimeRow}
-        <div class="meta-row"><strong>Where:</strong> ${item.location}</div>
-        <a class="contact-link" href="${contactHref}" target="_blank" rel="noopener noreferrer">${contactLabel}</a>
-        <div class="via-source">via ${item.source}</div>
-      </div>
-    `;
-  }).join('');
-}
-
-function render() {
-  const filtered = getFilteredListings();
-  renderCards(filtered);
-}
-
-searchInput.addEventListener('input', (e) => {
-  searchText = e.target.value;
-  render();
-});
-
-categoryFilters.addEventListener('click', (e) => {
-  const btn = e.target.closest('.filter-btn');
-  if (!btn) return;
-
-  const category = btn.dataset.category;
-
-  if (category === 'All') {
-    activeCategories.clear();
-  } else {
-    if (activeCategories.has(category)) {
-      activeCategories.delete(category);
-    } else {
-      activeCategories.add(category);
-    }
-  }
-
-  updateFilterButtonStates();
-  render();
-});
-
-function updateFilterButtonStates() {
-  const buttons = categoryFilters.querySelectorAll('.filter-btn');
-  buttons.forEach(btn => {
-    const cat = btn.dataset.category;
-    if (cat === 'All') {
-      btn.classList.toggle('active', activeCategories.size === 0);
-    } else {
-      btn.classList.toggle('active', activeCategories.has(cat));
-    }
-  });
-}
-
-clearFiltersBtn.addEventListener('click', () => {
-  searchText = '';
-  searchInput.value = '';
-  activeCategories.clear();
-  updateFilterButtonStates();
-  render();
-});
-
-updateFilterButtonStates();
-render();
-</script>
 
 </body>
 </html>
