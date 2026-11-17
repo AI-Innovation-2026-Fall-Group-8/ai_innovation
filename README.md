@@ -83,6 +83,35 @@ Real event badges use source categories and topics, rather than inferred generic
 you enable demo listings. A selected event category filters real events only;
 clearing filters resets the category and date selections.
 
+## Browsing and filters
+
+- **Search tags:** a separate, case-insensitive partial match against source tags
+  and categories, with suggestions from the feed. It combines with the main
+  keyword search and category selector.
+- **Dates:** upcoming/ongoing, today, tomorrow, next seven calendar days, all dates,
+  past events, or unconfirmed dates. Day boundaries use Pacific Time regardless
+  of the visitor's timezone.
+- **From / Through:** inclusive date bounds. Entering a date switches the preset
+  to All dates; events match if their schedules overlap the selected days.
+  Reversed bounds show a validation message. Other filters still apply.
+- **Starts at:** morning (6 AM–noon), afternoon (noon–5 PM), evening (5–9 PM), or
+  night (9 PM–6 AM). These filter the original start time. All-day and undated
+  events do not match a time-of-day filter. No session times are inferred for
+  multi-day events.
+- **Order and headings:** earliest start first, grouped by Pacific start date,
+  with one heading per day. Undated events and optional demos follow dated
+  events. Multi-day events appear once under their actual start date. The
+  highlighted When block appears directly below each card title.
+- **Visible filters:** the summary lists keywords, tag query, category, dates and
+  start-time filter. Category choices show the matching count under other filters
+  and the category total when they differ. Clear filters resets every filter,
+  turns demos off and restores all 295 events in this snapshot.
+
+The reported 13-result view had `leadership` in the main search. All event
+categories clears only the category selection; the search still narrows results.
+The new summary makes that visible. Browser verification confirmed Clear filters
+restores 295/295; regression tests verify every category's unfiltered total.
+
 ## ZotSpot dates and tags
 
 The importer decodes `raw_data.fields` to find the named positional fields. It
@@ -179,8 +208,9 @@ original source labels, raw-record aliases, deduplication and unsafe links. Java
 the actual feed, category counts and filters, source badges, all-day display,
 ongoing events, search, optional demos, safe rendering,
 unknown dates, malformed JSON, HTTP failures, retry and local-file guidance.
-Browser checks verified the root entry, real feed, no-results view and clearing
-filters. No deployment or GitHub push was performed.
+Browser checks verified the root entry, real feed, no-results view, tag search,
+next-seven-days filtering, date headings, highlighted times, the reported
+13-result search state, and clearing filters back to all 295 events. No deployment or GitHub push was performed.
 
 ## Git workflow used
 
@@ -192,7 +222,9 @@ Work is on `feature/uci-event-feed`, based on upstream commit `c0187b6`.
 
 Follow-up commits correct ZotSpot HTML schedule parsing and replace generic
 badges with original categories and topics, with expanded regression coverage.
+Later commits add tag search, date/time filters, chronological date groups, and
+visible active filters with contextual category counts.
 
-Inspect the work with `git log --oneline -5` and
+Inspect the work with `git log --oneline c0187b6..HEAD` and
 `git diff c0187b6..HEAD --stat`. All work is local; publish the reviewed branch
 through your normal GitHub process.
