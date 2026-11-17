@@ -36,6 +36,7 @@ class TextParser(HTMLParser):
 def clean(value):
     parser = TextParser()
     parser.feed(unescape(str(value or '')))
+    parser.close()
     return ' '.join(''.join(parser.parts).split())
 
 
@@ -143,6 +144,7 @@ def labels(value):
         return unique(label for item in value for label in labels(item))
     parser = LabelParser()
     parser.feed(unescape(str(value or '')))
+    parser.close()
     if parser.labels:
         return unique(parser.labels)
     text = clean(''.join(parser.text))

@@ -79,6 +79,9 @@ class ExportTests(unittest.TestCase):
     def test_deduplicates_within_source_but_retains_other_sources(self):
         self.assertEqual(len(sync.export([self.event(), self.event(), self.event(source='club-site')])), 2)
 
+    def test_plain_text_ampersands_are_preserved(self):
+        self.assertEqual(sync.export([self.event(title='Workshop: How to Pitch and Crush Q&A')])[0]['title'], 'Workshop: How to Pitch and Crush Q&A')
+
     def test_sanitizes_markup_and_unsafe_links(self):
         result = sync.export([self.event(title='<b>Meeting &amp; snacks</b>', rsvp_url='javascript:alert(1)')])[0]
         self.assertEqual(result['title'], 'Meeting & snacks')

@@ -208,17 +208,20 @@
 <main>
   <section id="controls">
     <input type="search" aria-label="Search listings" id="searchInput" placeholder="Search events, jobs, resources...">
-    <div id="categoryFilters">
+    <div id="categoryFilters" aria-label="Event feed and demo resource groups">
       <button class="filter-btn" data-category="All">All</button>
-      <button class="filter-btn" data-category="Clubs">Clubs</button>
-      <button class="filter-btn" data-category="Jobs">Jobs</button>
-      <button class="filter-btn" data-category="Basic Needs">Basic Needs</button>
-      <button class="filter-btn" data-category="Housing">Housing</button>
+      <button class="filter-btn" hidden data-category="Clubs">Clubs</button>
+      <button class="filter-btn" hidden data-category="Jobs">Jobs</button>
+      <button class="filter-btn" hidden data-category="Basic Needs">Basic Needs</button>
+      <button class="filter-btn" hidden data-category="Housing">Housing</button>
       <button class="filter-btn active" data-category="Events">UCI Events</button>
-      <button class="filter-btn" data-category="Career Fairs">Career Fairs</button>
-      <button class="filter-btn" data-category="Health/Wellness">Health/Wellness</button>
+      <button class="filter-btn" hidden data-category="Career Fairs">Career Fairs</button>
+      <button class="filter-btn" hidden data-category="Health/Wellness">Health/Wellness</button>
     </div>
     <div class="event-tools">
+      <label for="eventCategoryFilter">Event category:
+        <select id="eventCategoryFilter"><option value="">All event categories</option></select>
+      </label>
       <label for="eventPeriod">UCI events: <select id="eventPeriod">
         <option value="upcoming">Upcoming &amp; ongoing</option>
         <option value="all">All dates</option>

@@ -46,6 +46,29 @@ async function run() {
   assert.throws(() => app.run('normalizeFeed({})'), /JSON array/);
   assert.equal(app.run('normalizeFeed([]).length'), 0);
 
+  const categorized = await createApp(response([
+    {id:'workshop',title:'Skill session',source:'zotspot', categories:['Workshop'], tags:['Workshop','Networking','networking'], start_datetime:'2026-12-01T18:00:00-08:00', end_datetime:'2026-12-01T20:00:00-08:00'},
+    {id:'social',title:'Meet students',source:'zotspot', categories:['Social'], tags:['Games'], start_datetime:'2026-12-02T18:00:00-08:00'}
+  ]));
+  assert.match(categorized.nodes.eventCategoryFilter.innerHTML, /Workshop \(1\)/);
+  assert.ok(categorized.nodes.cardGrid.innerHTML.includes('>Workshop</span>'));
+  assert.ok(categorized.nodes.cardGrid.innerHTML.includes('>Networking</span>'));
+  assert.ok(!categorized.nodes.cardGrid.innerHTML.includes('>Clubs</span>'));
+  assert.ok(!categorized.nodes.cardGrid.innerHTML.includes('>Events</span>'));
+  assert.equal(categorized.run('UCI_EVENTS[0].displayTags.length'), 2);
+  categorized.nodes.eventCategoryFilter.value = 'Workshop';
+  categorized.nodes.eventCategoryFilter.handlers.change();
+  assert.equal(categorized.run('getFilteredListings().length'), 1);
+  assert.ok(!categorized.nodes.cardGrid.innerHTML.includes('Meet students'));
+  categorized.nodes.clearFiltersBtn.handlers.click();
+  assert.equal(categorized.nodes.eventCategoryFilter.value, '');
+  assert.equal(categorized.run('getFilteredListings().length'), 2);
+  categorized.run("searchText = 'Networking'; render();");
+  assert.equal(categorized.run('getFilteredListings().length'), 1);
+  const allDay = await createApp(response([{id:'day',title:'Day event',source:'zotspot', all_day:true, start_datetime:'2026-12-01T00:00:00-08:00', end_datetime:'2026-12-01T23:59:59-08:00'}]));
+  assert.ok(allDay.nodes.cardGrid.innerHTML.includes('Dec 1, 2026 (all day)'));
+  assert.ok(!allDay.nodes.cardGrid.innerHTML.includes('12:00 AM'));
+
   const hostile = await createApp(response([{id:'hostile',title:'<img src=x onerror=alert(1)>',source:'club-site', source_url:'javascript:alert(1)', start_datetime:'2026-12-01T18:00:00-08:00'}]));
   assert.ok(hostile.nodes.cardGrid.innerHTML.includes('&lt;img'));
   assert.ok(!hostile.nodes.cardGrid.innerHTML.includes('href="javascript:'));
@@ -70,7 +93,7 @@ async function run() {
   assert.match(malformed.nodes.feedErrorMessage.textContent, /Invalid JSON/);
   const local = await createApp(async () => {throw new Error('Failed to fetch');}, 'file:');
   assert.match(local.nodes.feedErrorMessage.textContent, /web server/);
-  return 'Passed: real feed loading, ongoing/past/undated filters, search, empty states, optional demos, safe rendering, bad dates, malformed JSON, HTTP errors, retry and file startup guidance.';
+  return 'Passed: original category badges, topic tags, category filtering and counts, all-day display, real feed loading, ongoing/past/undated filters, search, empty states, optional demos, safe rendering, bad dates, malformed JSON, HTTP errors, retry and file startup guidance.';
 }
 module.exports = run;
 if (require.main === module) run().then(console.log).catch(error => {console.error(error); process.exitCode = 1;});

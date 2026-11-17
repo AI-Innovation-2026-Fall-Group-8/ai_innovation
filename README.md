@@ -28,8 +28,10 @@ JSON; the page explains that a web server is needed.
    ```
 
    The command writes the website's `data/output/unified_events.json`. It can also
-   read any other path with the same unified schema. Do not substitute raw
-   `events.json`, which uses a different schema.
+   read any other path with the same unified schema. The supplied raw ZotSpot
+   `events.json` is also supported, including its `start_date`, `category`,
+   `group_name` and `url` aliases. Prefer the deduplicated unified output; do not
+   combine overlapping snapshots or test files.
 3. Refresh the local browser. No HTML edits or build step are required.
 4. Review and commit the updated public feed:
 
@@ -48,10 +50,12 @@ removes raw crawler payloads, deduplicates by `(source, id)`, and rejects invali
 dates before replacing the feed atomically. It reconstructs missing end times from
 the supplied crawler's raw date text when available and adds timezone offsets.
 This avoids marking a multi-day event as past based only on its start date.
+It also reads the single-day HTML layout with a date paragraph followed by an
+hour-only time range, which the supplied unified crawler had left unparsed.
 Records from different sources are kept distinct; cross-source duplicate matching
 belongs in your collection pipeline. Separate recurring occurrences need distinct IDs.
 
-The public feed is approximately 260 KB versus 1.6 MB for the supplied unified
+The public feed is approximately 292 KB versus 1.6 MB for the supplied unified
 crawler output. Only the public export should be deployed; keep crawler auth,
 cookies, debug files and raw collection data outside the website directory.
 
@@ -59,7 +63,9 @@ cookies, debug files and raw collection data outside the website directory.
 
 - Starts with UCI events, showing upcoming and ongoing events in Pacific Time.
 - Offers All dates, Past events, and Dates unconfirmed views.
-- Searches titles, descriptions, organizers, locations and topic tags.
+- Searches titles, descriptions, organizers, locations and source topic tags.
+- Displays the actual eventCategory and eventTags labels, with a category filter
+  generated from the feed (27 categories in the supplied snapshot).
 - Opens RSVP or official event links in a new tab.
 - Shows the latest record update date, separately from loading the page.
 - Has loading, empty, error, timeout and retry states.
@@ -72,9 +78,37 @@ outdated details or broad recurring-event date ranges; follow the official link
 for the specific session schedule. Loading JSON does not itself verify freshness.
 A page refresh revalidates the published feed; it does not perform a fresh crawl.
 
-The Clubs filter uses the crawler's `organizer_type`; source categorization errors
-will carry into this filter until corrected in the pipeline. Other resource
-categories contain demo listings until you supply real resource data.
+Real event badges use source categories and topics, rather than inferred generic
+"Events / Clubs" labels. The original broad resource buttons are shown only when
+you enable demo listings. A selected event category filters real events only;
+clearing filters resets the category and date selections.
+
+## ZotSpot dates and tags
+
+The importer decodes `raw_data.fields` to find the named positional fields. It
+uses `eventDates` (`p4` in the supplied schema) as the authoritative schedule,
+before the potentially incomplete `start_datetime` / `end_datetime`. It also
+accepts `eventsDates`, `start_date` and `start_data` HTML as fallbacks. Both dates
+and times are extracted after decoding HTML and entities, with support for:
+
+- A date paragraph followed by `8 AM – 10 AM` or `11:30 AM – 12 PM`.
+- Separate full start and end dates, including multi-day / multi-year ranges.
+- Overnight ranges such as `11 PM – 1 AM`.
+- Date-only schedules, exported with `all_day: true` and displayed without an
+  invented time. The end-of-day boundary is used only for filtering.
+
+The original cleaned schedule is retained as `date_text` in the public feed.
+Timezone offsets are calculated for each date in America/Los_Angeles (or the
+record's supplied timezone), so daylight saving changes are handled by date.
+The supplied snapshot now has 295 parsed starts and ends, recovering 266 starts
+that were missing from its normalized fields. No newer events were crawled.
+
+`eventCategory` (`p5`) supplies primary categories. `eventTags` (`p22`) supplies
+additional topics; the visible linked label is preferred over accessibility text
+such as "Job slash Volunteer Opportunities". Repeated labels are removed without
+merging distinct topics. Normalized categories and tags are fallbacks when the
+original fields are unavailable. New source categories automatically appear in
+the filter after the next export and page refresh.
 
 ## Why this architecture
 
@@ -139,9 +173,11 @@ python3 -m unittest discover -s tests -v
 node tests/test_app.cjs
 ```
 
-Python tests cover daylight saving offsets, recovered end dates, discarded raw
-payloads, deduplication, invalid records and unsafe links. JavaScript checks cover
-the actual feed, filters, ongoing events, search, optional demos, safe rendering,
+Python tests cover HTML schedule layouts, hour-only times, date-field priority,
+field-header decoding, overnight and all-day ranges, daylight saving offsets,
+original source labels, raw-record aliases, deduplication and unsafe links. JavaScript checks cover
+the actual feed, category counts and filters, source badges, all-day display,
+ongoing events, search, optional demos, safe rendering,
 unknown dates, malformed JSON, HTTP failures, retry and local-file guidance.
 Browser checks verified the root entry, real feed, no-results view and clearing
 filters. No deployment or GitHub push was performed.
@@ -154,6 +190,9 @@ Work is on `feature/uci-event-feed`, based on upstream commit `c0187b6`.
 2. Connect the frontend and verify behavior.
 3. Document refresh/deployment and complete validation.
 
-Inspect the work with `git log --oneline -3` and
+Follow-up commits correct ZotSpot HTML schedule parsing and replace generic
+badges with original categories and topics, with expanded regression coverage.
+
+Inspect the work with `git log --oneline -5` and
 `git diff c0187b6..HEAD --stat`. All work is local; publish the reviewed branch
 through your normal GitHub process.

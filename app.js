@@ -25,7 +25,15 @@ let feedState = 'loading';
 const activeCategories = new Set(['Events']);
 const eventPeriod = document.getElementById('eventPeriod');
 const showDemos = document.getElementById('showDemos');
-showDemos.addEventListener('change', render);
+const eventCategoryFilter = document.getElementById('eventCategoryFilter');
+showDemos.addEventListener('change', () => {
+  if (!showDemos.checked) {
+    activeCategories.clear();
+    activeCategories.add('Events');
+  }
+  render();
+});
+eventCategoryFilter.addEventListener('change', render);
 eventPeriod.addEventListener('change', render);
 
 function escapeHtml(value) {
@@ -40,10 +48,30 @@ function safeContact(value) {
   } catch { return ''; }
 }
 
-function eventDate(value) {
+function eventDate(value, dateOnly = false) {
   return new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/Los_Angeles', dateStyle: 'medium', timeStyle: 'short'
+    timeZone: 'America/Los_Angeles', dateStyle: 'medium', ...(dateOnly ? {} : {timeStyle: 'short'})
   }).format(new Date(value));
+}
+
+function uniqueLabels(values) {
+  const seen = new Set();
+  return values.filter(value => typeof value === 'string').map(value => value.trim()).filter(value => {
+    const key = value.toLowerCase();
+    if (!value || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function updateEventCategoryFilter() {
+  const selected = eventCategoryFilter.value;
+  const counts = new Map();
+  UCI_EVENTS.forEach(item => item.sourceCategories.forEach(category => counts.set(category, (counts.get(category) || 0) + 1)));
+  eventCategoryFilter.innerHTML = '<option value="">All event categories</option>' +
+    [...counts].sort(([a], [b]) => a.localeCompare(b)).map(([category, count]) =>
+      `<option value="${escapeHtml(category)}">${escapeHtml(category)} (${count})</option>`).join('');
+  eventCategoryFilter.value = counts.has(selected) ? selected : '';
 }
 
 function isPastEvent(item) {
@@ -71,7 +99,9 @@ function getFilteredListings() {
     const matchesPeriod = !item.isEvent || eventPeriod.value === 'all' ||
       (eventPeriod.value === 'undated' ? !item.start : item.start &&
         (eventPeriod.value === 'past' ? isPastEvent(item) : !isPastEvent(item)));
-    return matchesSearch && matchesCategory && matchesPeriod;
+    const matchesEventCategory = !eventCategoryFilter.value ||
+      (item.isEvent && item.sourceCategories.includes(eventCategoryFilter.value));
+    return matchesSearch && matchesCategory && matchesPeriod && matchesEventCategory;
   }).sort((a, b) => {
     if (!a.isEvent || !b.isEvent) return Number(Boolean(b.isEvent)) - Number(Boolean(a.isEvent));
     if (isPastEvent(a) !== isPastEvent(b)) return Number(isPastEvent(a)) - Number(isPastEvent(b));
@@ -94,13 +124,13 @@ function renderCards(listings) {
   emptyState.hidden = true;
 
   cardGrid.innerHTML = listings.map((item, idx) => {
-    const tagsHtml = item.categories.map((cat, i) => {
-      const cls = i % 2 === 0 ? 'blue-bg' : 'yellow-bg';
+    const tagsHtml = (item.isEvent ? item.displayTags : item.categories).map((cat, i) => {
+      const cls = item.isEvent ? (item.sourceCategories.includes(cat) ? 'blue-bg' : 'yellow-bg') : (i % 2 === 0 ? 'blue-bg' : 'yellow-bg');
       return `<span class="tag ${cls}">${escapeHtml(cat)}</span>`;
     }).join('');
 
     const dateLabel = item.isEvent && item.start
-      ? `${eventDate(item.start)}${item.end ? ' – ' + eventDate(item.end) : ''} PT`
+      ? `${eventDate(item.start, item.allDay)}${item.end && (!item.allDay || eventDate(item.end, true) !== eventDate(item.start, true)) ? ' – ' + eventDate(item.end, item.allDay) : ''}${item.allDay ? ' (all day)' : ' PT'}`
       : item.datetime;
     const datetimeRow = dateLabel
       ? `<div class="meta-row"><strong>When:</strong> ${escapeHtml(dateLabel)}</div>`
@@ -131,6 +161,7 @@ function render() {
     resultsInfo.textContent = feedState === 'loading' ? 'Loading UCI events…' : 'Event feed unavailable';
     return;
   }
+  updateFilterButtonStates();
   LISTINGS = showDemos.checked ? [...UCI_EVENTS, ...DEMO_LISTINGS] : UCI_EVENTS;
   const filtered = getFilteredListings();
   renderCards(filtered);
@@ -165,6 +196,7 @@ function updateFilterButtonStates() {
   const buttons = categoryFilters.querySelectorAll('.filter-btn');
   buttons.forEach(btn => {
     const cat = btn.dataset.category;
+    btn.hidden = !['All', 'Events'].includes(cat) && !showDemos.checked;
     if (cat === 'All') {
       btn.classList.toggle('active', activeCategories.size === 0);
       btn.setAttribute('aria-pressed', String(activeCategories.size === 0));
@@ -180,6 +212,7 @@ clearFiltersBtn.addEventListener('click', () => {
   searchInput.value = '';
   activeCategories.clear();
   eventPeriod.value = 'all';
+  eventCategoryFilter.value = '';
   updateFilterButtonStates();
   render();
 });
@@ -201,12 +234,15 @@ function normalizeFeed(rows) {
       throw new Error('An event has an invalid date range.');
     }
     const source = typeof row.source === 'string' ? row.source : 'unknown';
+    const sourceCategories = uniqueLabels(Array.isArray(row.categories) ? row.categories : []);
+    const topics = uniqueLabels(Array.isArray(row.tags) ? row.tags : []);
+    const displayTags = uniqueLabels([...sourceCategories, ...topics]);
     return {
       id: `${source}:${row.id}`, title: row.title,
       description: typeof row.description === 'string' ? row.description : '',
       start: row.start_datetime || null, end: row.end_datetime || null,
-      categories: ['Events', ...(row.organizer_type === 'club' ? ['Clubs'] : [])],
-      tags: [...(Array.isArray(row.categories) ? row.categories : []), ...(Array.isArray(row.tags) ? row.tags : [])],
+      categories: ['Events', ...sourceCategories], sourceCategories,
+      displayTags: displayTags.length ? displayTags : ['Event'], tags: displayTags, allDay: row.all_day === true,
       location: row.location || 'Location not provided', organizer: row.organizer_name || 'Organizer not provided',
       contact: safeContact(row.rsvp_url || '') || safeContact(row.source_url || ''),
       source: source === 'zotspot' ? 'ZotSpot' : source, cost: row.cost || '',
@@ -230,6 +266,7 @@ async function loadEvents() {
     const response = await fetch('./data/output/unified_events.json', {cache: 'no-cache', signal: controller.signal});
     if (!response.ok) throw new Error(`The event file could not be loaded (HTTP ${response.status}).`);
     UCI_EVENTS = normalizeFeed(await response.json());
+    updateEventCategoryFilter();
     feedState = 'ready';
     const dates = UCI_EVENTS.map(item => item.lastUpdated.slice(0, 10)).filter(value => /^\d{4}-\d{2}-\d{2}$/.test(value)).sort();
     const updated = dates.length ? ` Latest record update: ${dates[dates.length - 1]}.` : '';
