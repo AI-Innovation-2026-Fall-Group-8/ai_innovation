@@ -92,8 +92,9 @@ def main():
     for club in clubs[:20]:
         print(f"  {club.id}: {club.name}")
 
-    # Also generate Instagram handles file (using login as fallback)
-    handles = {club.id: club.name.lower().replace(' ', '').replace('&', '').replace('.', '').replace("'", '').replace('-', '') for club in clubs}
+    # A directory name is not evidence of an Instagram handle.
+    # Use club_sources.py to discover published social links.
+    handles = {}
     handles_path = os.path.join(DATA_CLUBS, 'club_instagram_handles_from_html.json')
     with open(handles_path, 'w') as f:
         json.dump(handles, f, indent=2)

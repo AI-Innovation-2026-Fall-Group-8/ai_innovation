@@ -2,12 +2,19 @@
 """
 ZotSpot Club Directory Crawler
 Fetches ALL UCI clubs/organizations from the club directory.
-Uses the mobile_groups_list API endpoint (similar to events API).
+Default: follow the public directory Website links and discover club contacts.
+Use --collect-events for public event/text collection, or --legacy-api for the
+original experimental mobile_groups_list endpoint.
 """
+
+from __future__ import annotations
 
 import json
 import time
-import requests
+try:
+    import requests
+except ImportError:
+    requests = None
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, asdict
 import logging
@@ -53,6 +60,8 @@ class ClubDirectoryCrawler:
     """Crawler for ZotSpot club directory"""
 
     def __init__(self, base_delay: float = DEFAULT_DELAY, max_delay: float = MAX_DELAY):
+        if requests is None:
+            raise RuntimeError('The legacy API mode requires requests; the default website discovery uses only Python standard libraries.')
         self.session = requests.Session()
         self.session.headers.update({
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
@@ -237,9 +246,6 @@ class ClubDirectoryCrawler:
                     username = ig.strip("@")
                 if username:
                     handles[club.id] = username
-            elif club.login:
-                # Use login as fallback (often matches Instagram handle)
-                handles[club.id] = club.login
 
         with open(output_path, 'w') as f:
             json.dump(handles, f, indent=2)
@@ -277,7 +283,7 @@ class ClubDirectoryCrawler:
         logger.info(f"Generated club lookup with {len(lookup)} clubs to {output_path}")
 
 
-def main():
+def legacy_main():
     import argparse
 
     parser = argparse.ArgumentParser(description="Crawl ZotSpot club directory")
@@ -309,6 +315,20 @@ def main():
     # Print sample
     for club in clubs[:5]:
         print(f"  - {club.name} (ID: {club.id}) - {club.login} - {club.category}")
+
+
+def main():
+    import sys
+    if '--legacy-api' in sys.argv:
+        sys.argv.remove('--legacy-api')
+        legacy_main()
+    elif '--collect-events' in sys.argv:
+        sys.argv.remove('--collect-events')
+        from club_event_crawler import main as collect_main
+        collect_main()
+    else:
+        from club_sources import main as discover_main
+        discover_main()
 
 
 if __name__ == "__main__":
