@@ -1,3 +1,27 @@
+main {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+#controls {
+  margin-bottom: 20px;
+}
+
+#resource-search {
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 1rem;
+  border: 2px solid #0064A4;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  color: #0064A4;
+}
+
+#resource-search::placeholder {
+  color: #8aa9c2;
+}
+
 :root {
   --uci-blue: #0064a4;
   --uci-dark-blue: #003b5c;
