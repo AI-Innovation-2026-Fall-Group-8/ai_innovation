@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resources | ZotLife</title>
+
+  <style>
+    :root {
+      --blue: #0064a4;
+      --dark-blue: #003b5c;
+      --gold: #ffd200;
+      --background: #f5f8fb;
+      --text: #172b3a;
+      --muted: #526675;
+      --border: #dce5eb;
+      --white: #fff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--text);
+      background: var(--background);
+      line-height: 1.5;
+    }
+
+    a {
+      color: var(--blue);
+    }
+
+    a:focus-visible,
+    button:focus-visible,
+    input:focus-visible {
+      outline: 3px solid var(--gold);
+      outline-offset: 3px;
+    }
+
+    .container {
+      width: min(1100px, calc(100% - 2rem));
+      margin: 0 auto;
+    }
+
+    header {
+      background: var(--dark-blue);
+      color: var(--white);
+    }
+
+    .header-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1rem 0;
+      flex-wrap: wrap;
+    }
+
+    .logo {
+      color: var(--white);
+      font-size: 1.5rem;
+      font-weight: bold;
+      text-decoration: none;
+    }
+
+    nav {
+      display: flex;
+      gap: 1.25rem;
+    }
+
+    nav a {
+      color: var(--white);
+      text-decoration: none;
+    }
+
+    nav a[aria-current="page"] {
+      border-bottom: 3px solid var(--gold);
+      font-weight: bold;
+    }
+
+    main {
+      padding: 2.5rem 0 4rem;
+    }
+
+    h1 {
+      margin: 0 0 0.5rem;
+      color: var(--dark-blue);
+      font-size: clamp(2rem, 5vw, 2.75rem);
+    }
+
+    .intro {
+      max-width: 650px;
+      margin: 0 0 1.75rem;
+      color: var(--muted);
+    }
+
+    .search-label {
+      display: block;
+      margin-bottom: 0.4rem;
+      font-weight: bold;
+    }
+
+    input[type="search"] {
+      width: 100%;
+      padding: 0.8rem;
+      border: 1px solid #aabdc9;
+      border-radius: 8px;
+      background: var(--white);
+      color: var(--text);
+      font: inherit;
+    }
+
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin: 1rem 0 1.5rem;
+    }
+
+    .filter {
+      padding: 0.5rem 0.85rem;
+      border: 1px solid #b8cbd7;
+      border-radius: 999px;
+      background: var(--white);
+      color: var(--dark-blue);
+      font: inherit;
+      cursor: pointer;
+    }
+
+    .filter[aria-pressed="true"] {
+      border-color: var(--dark-blue);
+      background: var(--dark-blue);
+      color: var(--white);
+    }
+
+    .result-count {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+      gap: 1rem;
+    }
+
+    .card {
+      display: flex;
+      flex-direction: column;
+      padding: 1.25rem;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--white);
+      box-shadow: 0 3px 12px rgba(0, 59, 92, 0.05);
+    }
+
+    .card[hidden] {
+      display: none;
+    }
+
+    .tag {
+      align-self: flex-start;
+      padding: 0.2rem 0.55rem;
+      border-radius: 999px;
+      background: #e8f3fa;
+      color: var(--dark-blue);
+      font-size: 0.8rem;
+      font-weight: bold;
+    }
+
+    .card h2 {
+      margin: 0.8rem 0 0.4rem;
+      font-size: 1.2rem;
+    }
+
+    .card p {
+      margin: 0 0 1rem;
+      color: var(--muted);
+    }
+
+    .card a {
+      margin-top: auto;
+      font-weight: bold;
+      text-decoration: none;
+    }
+
+    .card a:hover,
+    nav a:hover {
+      text-decoration: underline;
+    }
+
+    .empty {
+      padding: 1.5rem;
+      border: 1px dashed #b8cbd7;
+      border-radius: 10px;
+      color: var(--muted);
+    }
+
+    footer {
+      padding: 1.5rem 0;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="container header-content">
+      <!-- Change index.html if your main page has a different filename -->
+      <a class="logo" href="index.html">ZotLife</a>
+
+      <nav aria-label="Main navigation">
+        <a href="index.html">Events</a>
+        <a href="resources.html" aria-current="page">Resources</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <h1>Resources at UCI</h1>
+    <p class="intro">
+      Find campus support for basic needs, wellness, academics, and your career.
+    </p>
+
+    <label class="search-label" for="resource-search">Search resources</label>
+    <input
+      id="resource-search"
+      type="search"
+      placeholder="Try food, counseling, or tutoring"
+    >
+
+    <div class="filters" role="group" aria-label="Filter resources by category">
+      <button class="filter" type="button" data-filter="all" aria-pressed="true">
+        All
+      </button>
+      <button class="filter" type="button" data-filter="basic-needs" aria-pressed="false">
+        Basic Needs
+      </button>
+      <button class="filter" type="button" data-filter="wellness" aria-pressed="false">
+        Wellness
+      </button>
+      <button class="filter" type="button" data-filter="academic" aria-pressed="false">
+        Academic
+      </button>
+      <button class="filter" type="button" data-filter="career" aria-pressed="false">
+        Career
+      </button>
+    </div>
+
+    <p class="result-count" id="result-count" aria-live="polite"></p>
+
+    <div class="cards" id="resource-list">
+      <article
+        class="card"
+        data-category="basic-needs"
+        data-keywords="food pantry housing financial assistance"
+      >
+        <span class="tag">Basic Needs</span>
+        <h2>UCI Basic Needs Center</h2>
+        <p>Explore support for food, housing, and other essential needs.</p>
+        <a href="https://basicneeds.uci.edu/">Visit Basic Needs Center →</a>
+      </article>
+
+      <article
+        class="card"
+        data-category="wellness"
+        data-keywords="health wellbeing workshops prevention"
+      >
+        <span class="tag">Wellness</span>
+        <h2>Center for Student Wellness &amp; Health Promotion</h2>
+        <p>Find wellness education, programs, and health resources.</p>
+        <a href="https://studentwellness.uci.edu/">Visit Student Wellness →</a>
+      </article>
+
+      <article
+        class="card"
+        data-category="wellness"
+        data-keywords="mental health therapy counseling support"
+      >
+        <span class="tag">Wellness</span>
+        <h2>UCI Counseling Center</h2>
+        <p>Explore counseling and mental health support for students.</p>
+        <a href="https://counseling.uci.edu/">Visit Counseling Center →</a>
+      </article>
+
+      <article
+        class="card"
+        data-category="academic"
+        data-keywords="tutoring study learning classes"
+      >
+        <span class="tag">Academic</span>
+        <h2>Learning and Academic Resource Center</h2>
+        <p>Find academic support and learning resources.</p>
+        <a href="https://larc.uci.edu/">Visit LARC →</a>
+      </article>
+
+      <article
+        class="card"
+        data-category="academic"
+        data-keywords="accessibility accommodations disability"
+      >
+        <span class="tag">Academic</span>
+        <h2>Disability Services Center</h2>
+        <p>Learn about disability-related support and accommodations.</p>
+        <a href="https://dsc.uci.edu/">Visit Disability Services →</a>
+      </article>
+
+      <article
+        class="card"
+        data-category="career"
+        data-keywords="jobs internships resumes career"
+      >
+        <span class="tag">Career</span>
+        <h2>Division of Career Pathways</h2>
+        <p>Explore career advising, job search tools, and internships.</p>
+        <a href="https://career.uci.edu/">Visit Career Pathways →</a>
+      </article>
+    </div>
+
+    <p class="empty" id="empty-message" hidden>
+      No resources match your search. Try another keyword or category.
+    </p>
+  </main>
+
+  <footer>
+    <div class="container">
+      ZotLife — campus events and resources.
+      <a href="index.html">Back to events</a>
+    </div>
+  </footer>
+
+  <script>
+    const search = document.getElementById("resource-search");
+    const filters = document.querySelectorAll(".filter");
+    const cards = document.querySelectorAll(".card");
+    const resultCount = document.getElementById("result-count");
+    const emptyMessage = document.getElementById("empty-message");
+
+    let selectedCategory = "all";
+
+    function updateResources() {
+      const query = search.value.trim().toLowerCase();
+      let visibleCount = 0;
+
+      cards.forEach((card) => {
+        const matchesCategory =
+          selectedCategory === "all" ||
+          card.dataset.category === selectedCategory;
+
+        const searchableText = (
+          card.textContent + " " + card.dataset.keywords
+        ).toLowerCase();
+
+        const matchesSearch = searchableText.includes(query);
+        const visible = matchesCategory && matchesSearch;
+
+        card.hidden = !visible;
+        if (visible) visibleCount++;
+      });
+
+      resultCount.textContent =
+        visibleCount + (visibleCount === 1 ? " resource" : " resources") + " found";
+
+      emptyMessage.hidden = visibleCount !== 0;
+    }
+
+    filters.forEach((button) => {
+      button.addEventListener("click", () => {
+        selectedCategory = button.dataset.filter;
+
+        filters.forEach((filter) => {
+          filter.setAttribute("aria-pressed", String(filter === button));
+        });
+
+        updateResources();
+      });
+    });
+
+    search.addEventListener("input", updateResources);
+    updateResources();
+  </script>
+</body>
+</html>
