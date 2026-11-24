@@ -1,0 +1,109 @@
+/* updating header */
+header {
+  background: #0064A4;
+  padding: 24px 20px;
+  text-align: center;
+}
+
+.logo {
+  color: #FFD200;
+  font-size: 2rem;
+  letter-spacing: 2.5px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.header-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+
+nav {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+nav a {
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 2px solid white;
+  background: white;
+  color: #0064A4;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+nav a[aria-current="page"] {
+  background: #0064A4;
+  color: #FFD200;
+  border-color: white;
+}
+
+/* updating resource cards */
+
+.card {
+  background: #ffffff;
+  border: 1px solid #dce5ec;
+  border-radius: 10px;
+  padding: 16px;
+  box-shadow: 0 2px 6px rgba(0,100,164,0.08);
+}
+
+.card h2 {
+  color: #0064A4;
+  font-size: 1.05rem;
+}
+
+.tag {
+  background: #0064A4;
+  color: #FFD200;
+  border-radius: 12px;
+  padding: 3px 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+/* category filters */
+.filter {
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 2px solid #0064A4;
+  background: white;
+  color: #0064A4;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.filter[aria-pressed="true"] {
+  background: #0064A4;
+  color: #FFD200;
+}
+
+/* restyling source links */
+.card a {
+  display: inline-block;
+  margin-top: auto;
+  padding: 7px 12px;
+  background: #FFD200;
+  color: #0064A4;
+  font-weight: 700;
+  border-radius: 6px;
+  text-decoration: none;
+  width: fit-content;
+}
+
+.card a:hover {
+  background: #e6bd00;
+}
+
+/* footer */
+footer {
+  text-align: center;
+  padding: 20px;
+  color: #0064A4;
+  background: #FFD200;
+  margin-top: 30px;
+}
