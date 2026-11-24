@@ -30,8 +30,14 @@ def calendar_feeds(url):
     query = parse_qs(parts.query)
     if query.get('action', [''])[0].upper() == 'TEMPLATE' or '/event' in parts.path:
         return []  # An add-one-event button is not a subscribable calendar.
-    ids = query.get('src', [])
+    ids = list(query.get('src', []))
+    linked_feeds = []
     for value in query.get('cid', []):
+        if value.startswith(('webcal://', 'https://', 'http://')):
+            linked = public_url(value)
+            if linked and urlsplit(linked).path.lower().endswith('.ics'):
+                linked_feeds.append(linked)
+            continue
         if '@' in value:
             ids.append(value)
         else:
@@ -39,14 +45,17 @@ def calendar_feeds(url):
                 ids.append(base64.urlsafe_b64decode(value + '=' * (-len(value) % 4)).decode())
             except (ValueError, UnicodeError):
                 continue
-    return list(dict.fromkeys('https://calendar.google.com/calendar/ical/' + quote(cid, safe='') + '/public/basic.ics'
-                              for cid in ids if '@' in cid and not any(c.isspace() for c in cid)))
+    derived = ['https://calendar.google.com/calendar/ical/' + quote(cid, safe='') + '/public/basic.ics'
+               for cid in ids if '@' in cid and not any(c.isspace() for c in cid)]
+    return list(dict.fromkeys([*linked_feeds, *derived]))
 
 
 def source_kind(url, label=''):
     p = urlsplit(url)
     host, path = p.hostname or '', p.path.lower()
     words = label.lower() + ' ' + unquote(path)
+    if re.search(r'/comments?/|comment-page-|comments? feed', words):
+        return None
     if platform(url):
         return None
     if calendar_feeds(url):
@@ -58,9 +67,10 @@ def source_kind(url, label=''):
     if ('campaign-archive.com' in host and ('/home/' in path or not parse_qs(p.query).get('id'))
             or re.search(r'newsletter|newsletters', words) and re.search(r'archive|past issues|previous issues', words)):
         return 'newsletter_archive'
-    if 'campaign-archive.com' in host or host_matches(host, 'mailchi.mp'):
+    if ('campaign-archive.com' in host or host_matches(host, 'mailchi.mp')
+            or 'hubspotpreview' in host or 'hs_preview' in parse_qs(p.query)):
         return 'newsletter_issue'
-    if path.endswith(('.rss', '.atom', '/feed', '/feed/')) or '/rss' in path:
+    if re.search(r'newsletter|mailing', words) and (path.endswith(('.rss', '.atom', '/feed', '/feed/')) or '/rss' in path):
         return 'newsletter_feed'
     if re.search(r'newsletter|mailing.list', words):
         return 'newsletter_page'
@@ -78,6 +88,8 @@ def published_sources(html, page_url):
         if node.tag == 'iframe':
             links.append({'url': node.attrs.get('src', ''), 'label': node.attrs.get('title', '')})
         elif node.tag == 'link' and node.attrs.get('type', '').lower() in ('text/calendar', 'application/rss+xml', 'application/atom+xml'):
+            if node.attrs['type'].lower() != 'text/calendar' and not re.search(r'newsletter|mailing', node.attrs.get('href', '') + ' ' + node.attrs.get('title', ''), re.I):
+                continue  # Generic blog/comment feeds are not newsletter archives.
             links.append({'url': node.attrs.get('href', ''), 'label': node.attrs.get('title', ''),
                           'kind': 'calendar_feed' if node.attrs['type'].lower() == 'text/calendar' else 'newsletter_feed'})
     results, seen = [], set()
@@ -117,6 +129,8 @@ def archive_links(html, page_url):
         kind = source_kind(url, link['label'])
         if kind in ('newsletter_issue', 'newsletter_archive', 'newsletter_feed'):
             result.append({'url': url, 'kind': kind})
+        elif re.search(r'\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+20\d{2}\b|\bthe public good\b|\bnewsletter\b', link['label'], re.I):
+            result.append({'url': url, 'kind': 'newsletter_issue'})
         elif p.hostname == base.hostname and (re.search(r'/p/|/issues?/|/archive/|/newsletters?/', p.path, re.I)
                                                or re.search(r'past issues|previous|older|next|view.*browser', words)):
             result.append({'url': url, 'kind': 'newsletter_issue'})

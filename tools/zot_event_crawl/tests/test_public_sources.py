@@ -19,6 +19,7 @@ class PublicSourceTests(unittest.TestCase):
         cid = base64.urlsafe_b64encode(b'club@group.calendar.google.com').decode().rstrip('=')
         self.assertEqual(len(calendar_feeds('https://calendar.google.com/calendar?cid=' + cid)), 1)
         self.assertEqual(len(calendar_feeds('https://calendar.google.com/calendar/embed?src=a%40uci.edu&src=b%40uci.edu')), 2)
+        self.assertEqual(calendar_feeds('https://www.google.com/calendar/render?cid=webcal://club.example/calendar.ics'), ['https://club.example/calendar.ics'])
 
     def test_add_event_and_secret_calendars_are_not_collected(self):
         self.assertEqual(calendar_feeds('https://calendar.google.com/calendar/render?action=TEMPLATE&text=Hello'), [])
@@ -41,6 +42,10 @@ class PublicSourceTests(unittest.TestCase):
         links = archive_links(html, 'https://club.example/newsletter/archive')
         self.assertEqual(len(links), 2)
         self.assertTrue(all('subscribe' not in s['url'] for s in links))
+
+    def test_generic_blog_and_comment_feeds_do_not_displace_calendar_requests(self):
+        sources = published_sources('<link type="application/rss+xml" title="Blog Feed" href="/feed/"><link type="application/rss+xml" title="Comments Feed" href="/comments/feed/">', 'https://club.example/')
+        self.assertEqual(sources, [])
 
 
 if __name__ == '__main__':
