@@ -2,7 +2,8 @@
 
 This folder contains the full ZotLife website, upgraded UCI crawler, saved data,
 and `.git` history. Keep the hidden `.git` folder when moving the project.
-You do not need a GitHub account. Nothing was pushed or published.
+You do not need a GitHub account to run the ZIP locally. Publishing a GitHub
+branch and deploying the website are separate actions; see Git for branch status.
 
 ## Open the website
 
