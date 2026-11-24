@@ -1,4 +1,16 @@
 /* updating header */
+header h1 {
+  color: #FFD200;
+  font-size: 2rem;
+  letter-spacing: 2.5px;
+  font-weight: 700;
+  margin: 0;
+}
+
+header p {
+  color: white;
+  margin-top: 6px;
+}
 header {
   background: #0064A4;
   padding: 24px 20px;
@@ -42,7 +54,22 @@ nav a[aria-current="page"] {
   border-color: white;
 }
 
+/* body */
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+               Roboto, Helvetica, Arial, sans-serif;
+  background: #f4f6f8;
+  color: #0064A4;
+}
+
 /* updating resource cards */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 18px;
+}
 
 .card {
   background: #ffffff;
