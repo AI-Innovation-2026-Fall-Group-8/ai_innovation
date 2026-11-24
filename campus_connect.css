@@ -1,0 +1,21 @@
+.header-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.header-nav a {
+  display: inline-block;
+  padding: 10px 16px;
+  background: #0064a4;
+  color: #fff;
+  border: 1px solid #0064a4;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.header-nav a:hover {
+  background: #003b5c;
+}
